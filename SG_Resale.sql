@@ -1,10 +1,13 @@
 # To view whole dataset
+
 SELECT 
     *
 FROM
     sg_resale.flat_prices;
 
+
 # To check if NULL value exist in the data
+
 SELECT 
     *
 FROM
@@ -12,25 +15,33 @@ FROM
 WHERE
     NULL;
 
+
 # 26 distinct town
+
 SELECT DISTINCT
     town
 FROM
     sg_resale.flat_prices;
 
+
 # 13 distinct flat_model
+
 SELECT DISTINCT
     flat_model
 FROM
     sg_resale.flat_prices;
 
+
 # 7 distinct flat_type
+
 SELECT DISTINCT
     flat_type
 FROM
     sg_resale.flat_prices;
 
+
 # Upon checking, 2-rooms is showing in flat_type and flat_model
+
 SELECT 
     *
 FROM
@@ -38,7 +49,9 @@ FROM
 WHERE
     flat_model = '2-ROOM';
 
+
 # To change flat_model with 2-rooms to Standard after extensive check online to confirm (https://www.teoalida.com/singapore/hdbflattypes/)
+
 UPDATE sg_resale.flat_prices 
 SET 
     flat_model = CASE flat_prices_id
@@ -86,19 +99,25 @@ WHERE
         286060,
         286061);
 
+
 # Updated 12 distinct flat_model
+
 SELECT DISTINCT
     flat_model
 FROM
     sg_resale.flat_prices;
 
+
 # 31 distinct lease_commence_date
+
 SELECT DISTINCT
     lease_commence_date
 FROM
     sg_resale.flat_prices;
 
+
 # Create a new column with date formatted. However as data did not have day, the days are 00 (which will be disregarded in future analysis)
+
 ALTER TABLE sg_resale.flat_prices ADD newcol date;
 UPDATE sg_resale.flat_prices 
 SET 
@@ -108,7 +127,9 @@ SET
 ALTER TABLE sg_resale.flat_prices
 RENAME COLUMN newcol TO date;
 
+
 # To view the max and min floor_area_sqm
+
 SELECT 
     flat_type,
     MAX(floor_area_sqm) AS floor_area_sqm,
@@ -127,7 +148,9 @@ FROM
 GROUP BY flat_type
 ORDER BY flat_type , floor_area_sqm;
 
+
 # Count number of lease_commence_date
+
 SELECT 
     lease_commence_date, COUNT(lease_commence_date) AS Count
 FROM
@@ -135,7 +158,9 @@ FROM
 GROUP BY lease_commence_date
 ORDER BY Count DESC;
 
+
 # To find the min and max resale_price against flat_type 
+
 SELECT 
     flat_type,
     MIN(resale_price) AS min_resale_price,
@@ -144,7 +169,9 @@ FROM
     sg_resale.flat_prices
 GROUP BY flat_type;
 
+
 # To find the min and max resale_price against flat_model
+
 SELECT MIN(resale_price) as min_resale_price, MAX(resale_price) as max_resale_price, flat_model
 FROM (
 select *,row_number() over(partition by flat_model)
@@ -153,19 +180,25 @@ from sg_resale.flat_prices
 group by flat_model
 ORDER BY flat_model;
 
+
 # 120 distinct dates (months and years combine)
+
 SELECT 
     COUNT(DISTINCT date)
 FROM
     sg_resale.flat_prices;
 
+
 # 10 distinct years (1990 - 1999)
+
 SELECT DISTINCT
     DATE_FORMAT(date, '%Y') AS yearly_date
 FROM
     sg_resale.flat_prices;
 
+
 # To view the max and min resale price 
+
 SELECT DISTINCT
     town,
     flat_type,
@@ -181,7 +214,9 @@ FROM
 GROUP BY town
 ORDER BY town , resale_price , flat_type;
 
+
 # To view lowest sqm per town with highest resale_price
+
 SELECT 
     t1.town,
     t1.floor_area_sqm,
@@ -198,13 +233,17 @@ FROM
 GROUP BY t1.town , t1.floor_area_sqm
 ORDER BY town;
 
+
 # Min storey range and max storey range (01 to 03, 25 to 27)
+
 SELECT 
     MIN(storey_range), MAX(storey_range)
 FROM
     sg_resale.flat_prices;
 
+
 # To view if it was possible to pull the value out of string. (Possible but cannot do the calculation for avg_resale_price against storey_range as in string format)
+
 SELECT 
     storey_range, resale_price
 FROM
@@ -212,17 +251,23 @@ FROM
 WHERE
     storey_range < 9;
 
+
 # Create new column to store the last 2 digits of storey_range
+
 ALTER TABLE sg_resale.flat_prices ADD storey VARCHAR(12);
 UPDATE sg_resale.flat_prices 
 SET 
     storey = RIGHT(storey_range, 2);
 
+
 # Convert the new storey column to INT from VARCHAR
+
 ALTER TABLE sg_resale.flat_prices
 MODIFY COLUMN storey INT;
 
+
 # Create column storey_status to indicate the bandwidth of each property based off the storey_range/storey data
+
 ALTER TABLE sg_resale.flat_prices ADD storey_status VARCHAR(25);
 UPDATE sg_resale.flat_prices 
 SET 
@@ -234,30 +279,40 @@ SET
         ELSE 'Error'
     END;
 
+
 # Calculate the avg_resale_price per storey_status (low,mid,high)
+
 SELECT 
     storey_status, AVG(resale_price) AS avg_resale_price
 FROM
     sg_resale.flat_prices
 GROUP BY storey_status;
 
+
 #Final thing to find is sum of resale_price over months based on 10 years basis and avg per month over 10 years and sum of months over 10 years
+
 ALTER TABLE sg_resale.flat_prices ADD sale_year INT;
 UPDATE sg_resale.flat_prices 
 SET 
     sale_year = LEFT(date, 4);
 
+
 # To view char_length of the column date    
+
 SELECT CHAR_LENGTH(date) FROM sg_resale.flat_prices;
 
+
 # To extract the month and create new column sale_month column
+
 SELECT SUBSTRING(date, 6, 2) FROM sg_resale.flat_prices;
 ALTER TABLE sg_resale.flat_prices ADD sale_month INT;
 UPDATE sg_resale.flat_prices 
 SET 
     sale_month = SUBSTRING(date, 6, 2);
-    
+
+
 # To change the sale_month to actual month instead of numbers. Requires to change from INT to VARCHAR
+
 ALTER TABLE sg_resale.flat_prices
 MODIFY COLUMN sale_month VARCHAR(12);
 UPDATE sg_resale.flat_prices 
@@ -277,11 +332,15 @@ SET
         WHEN sale_month = 12 THEN 'December'
         ELSE 'Error'
     END;
- 
+
+
 # To check if dashboard exist (NIL)
+
 DROP VIEW IF EXISTS sgflats;
 
+
 # To create new dashboard with only necessary information
+
 CREATE VIEW sgflats AS
     SELECT 
         flat_prices_id,
@@ -298,13 +357,17 @@ CREATE VIEW sgflats AS
     FROM
         sg_resale.flat_prices;
 
+
 # To check dashboard    
+
 SELECT 
     *
 FROM
     sgflats;
 
+
 # To view sum of resale price over sale_years
+
 SELECT 
     SUM(resale_price) as total_resale_price, sale_year
 FROM
@@ -312,7 +375,9 @@ FROM
 GROUP BY sale_year
 ORDER BY total_resale_price;
 
+
 # To view sum of resale price over sale_month
+
 SELECT 
     SUM(resale_price) as total_resale_price, sale_month
 FROM
@@ -320,10 +385,23 @@ FROM
 GROUP BY sale_month
 ORDER BY total_resale_price;
 
+
 # To view sum of resale price over storey_status
+
 SELECT 
     SUM(resale_price) as total_resale_price, storey_status
 FROM
     sgflats
 GROUP BY storey_status
 ORDER BY total_resale_price;
+
+
+# To view total sales within a month and year
+
+SELECT 
+    sale_month,
+    sale_year,
+    SUM(resale_price) AS total_resale_price
+FROM
+    sgflats
+GROUP BY sale_year , sale_month;
